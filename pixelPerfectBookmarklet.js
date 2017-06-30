@@ -4,11 +4,12 @@
  * - remembers what images are loaded to what url
  * - works on dynamic url changes
  * - you can check by opacity, sizing or flipping visibility
+ * In order to enforce breakpoints the bookmarklet inserts a page in which it loads itself, this means your CORS settings should be set accordingly (shouldn't be a problem for developer servers).
  */
 (function(){
 	const name = 'pixelPerfect'
-      ,getItem = localStorage.getItem.bind(localStorage)
-      ,setItem = localStorage.setItem.bind(localStorage)
+      ,storageGet = localStorage.getItem.bind(localStorage)
+      ,storageSet = localStorage.setItem.bind(localStorage)
       ,{body} = document
       ,wrap = document.getElementById(name)||document.createElement('div')
       ,mersenne = Math.pow(2,31)-1
@@ -26,11 +27,13 @@
         ,height: 100
       }
       ,dataName = `${name}Data`
-      ,data = Object.assign(dataDefault,JSON.parse(getItem(dataName)))||dataDefault;
+      ,data = Object.assign(dataDefault,JSON.parse(storageGet(dataName)))||dataDefault;
   let {pathname} = location
-      ,bg = getItem(pathname)||getItem(name)
+      ,list = getList()
+      ,bg = getBg()
       ,url = location.href
-      ,main,file,inner,image,show,range,horizontal,vertical;
+      ,main,file,loadedFile,paragraph,inner,image,show,range,horizontal,vertical,styleSheet,widthStyleRule;
+  console.log('list',list); // todo: remove log
   checkOverlay();
   const style =
 `#${name} {
@@ -142,14 +145,26 @@ input[type=range] {
   clip: rect(0 0 0 0);
   height: 1px; width: 1px;
   margin: -1px; padding: 0; border: 0;
+}
+body, html {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+iframe.${name} {
+  min-width: 100%;
+  min-height: 100%;
+  max-height: 100%;
 }`
       ,html =
 `<div class="inner" data-html2canvas-ignore>
-    <style>${style}</style>
+    <style title="${name}">${style}</style>
     <label class="file">
         add image
         <input class="visually-hidden" type="file" accept="image/gif, image/jpg, image/jpeg, image/png, image/svg, .gif, .jpg, .jpeg, .png, .svg" />
-    </label><br/>
+    </label>
+    <p></p>
     <label><span>show/hide</span><input type="checkbox" ${data.show?'checked':''} class="show" /></label>
     <label><span>opacity</span><input type="range" min="0" max="1" step="0.05" value="${data.opacity}" class="opacity" /></label>
     <label><span>horizontal</span><input type="range" min="0" max="100" step="0.1" value="${data.width}" class="horizontal" /></label>
@@ -160,9 +175,11 @@ input[type=range] {
 	wrap.id = name;
 	wrap.innerHTML = html;
   bg&&setBodyWidth(bg);
+  body.innerHTML = `<iframe src="${location.href}" class="${name}" frameborder="0"></iframe>`;
   body.appendChild(wrap);
   initEvents();
   requestAnimationFrame(initAfterFrame);
+
 
   /**
    * Initialise all the events
@@ -181,6 +198,7 @@ input[type=range] {
   function initAfterFrame(){
     main = document.getElementById(name);
     file = main.querySelector('input[type=file]');
+    paragraph = main.querySelector('p');
     inner = main.querySelector('.inner');
     image = main.querySelector('.image');
     show = main.querySelector('input.show');
@@ -189,24 +207,17 @@ input[type=range] {
     vertical = main.querySelector('input.vertical');
     inner.addEventListener('mousedown',()=>{wrap.classList.add('mousedown')});
     body.addEventListener('mouseup',()=>{wrap.classList.remove('mousedown')});
-    file.addEventListener('change',e=>{
-        const target = e.target
-            ,fileReader = new FileReader()
-            ,file = target.files[0];
-        fileReader.readAsDataURL(file);
-        fileReader.addEventListener('load', ()=>{
-            const result = fileReader.result;
-            setItem(name,result);
-            setItem(pathname,result);
-            setBackground(result);
-            target.value = null;
-        })
-    });
+    file.addEventListener('change',onFileChange);
     show.addEventListener('change',onShow);
     range.addEventListener('input',onOpacity);
     horizontal.addEventListener('input',onImageSize.bind(null,'width'));
     vertical.addEventListener('input',onImageSize.bind(null,'height'));
+
     requestAnimationFrame(()=>inner.classList.add('added'));
+
+    Array.from(document.styleSheets).forEach(sheet=>{
+      if (sheet.title===name) styleSheet = sheet;
+    });
   }
 
   /**
@@ -219,6 +230,16 @@ input[type=range] {
     });
   }
 
+  function getList(){
+  	const listRaw = storageGet(pathname)||storageGet(name);
+    return listRaw?JSON.parse(listRaw):[];
+  }
+
+  function getBg(){
+    loadedFile = list.slice(0).pop(); // todo: always last?
+    return loadedFile&&loadedFile.data?loadedFile.data:'';
+  }
+
   /**
    * Test if the new overlay is the same as the old one.
    * For when url changes dynamically (ie in SPA)
@@ -226,7 +247,8 @@ input[type=range] {
   function checkOverlay(){
     const oldBg = bg;
     pathname = location.pathname;
-    bg = getItem(pathname)||getItem(name);
+    list = getList();
+    bg = getBg();
     oldBg!==bg&&setBackground(bg)
   }
 
@@ -236,7 +258,7 @@ input[type=range] {
    */
   function setBackground(backgroundData){
     setBodyWidth(backgroundData);
-    image.style.backgroundImage = `url(${backgroundData})`;
+    if (image) image.style.backgroundImage = `url(${backgroundData})`;
   }
 
   /**
@@ -248,11 +270,59 @@ input[type=range] {
   }
 
   /**
+   * File input value has changed
+   * @param {Event} e
+   */
+  function onFileChange(e){
+    const target = e.target
+        ,fileReader = new FileReader()
+        ,file = target.files[0];
+    loadedFile = {name:file.name,lastModified:file.lastModified};
+    fileReader.addEventListener('load', onImageLoad);
+    fileReader.readAsDataURL(file);
+  }
+
+  /**
+   * FileReader has loaded file
+   * @param {Event} e
+   */
+  function onImageLoad(e){
+    const fileReader = e.target
+        ,result = fileReader.result;
+    // storageSet(name,result);
+    // storageSet(pathname,result);
+    setBackground(result.toString());
+    if (loadedFile) loadedFile.data = result;
+    file.value = null;
+  }
+
+  /**
    * Resize the page body to reflect the loaded image.
    * Handles the load event of the `imgLoader`
    */
-  function onBodyWidthLoad(e){
-  	body.style.width = `${e.currentTarget.naturalWidth}px`;
+  function onBodyWidthLoad({currentTarget}){
+    const {naturalWidth,naturalHeight} = currentTarget
+        ,style = `max-width:${naturalWidth}px;width:${naturalWidth}px;`;
+    //
+    //
+    //////////////////////////////////////////////////////////////////////////////
+    if (loadedFile) {
+      console.log('loadedFile',loadedFile); // todo: remove log
+      Object.assign(loadedFile,{naturalWidth,naturalHeight});
+      paragraph.innerText = `${loadedFile.name} ${naturalWidth}x${naturalHeight}`;
+      !list.includes(loadedFile)&&list.push(loadedFile); // todo: overwrite same with files
+    }
+    storageSet(name,JSON.stringify(list));
+    storageSet(pathname,JSON.stringify(list));
+    //////////////////////////////////////////////////////////////////////////////
+    //
+    //
+    if (!widthStyleRule) {
+      getStyleSheet().addRule(`html, body, iframe.${name}`,style);
+      widthStyleRule = styleSheet.rules[styleSheet.rules.length-1];
+    } else {
+      widthStyleRule.style = style;
+    }
   }
 
   /**
@@ -345,8 +415,18 @@ input[type=range] {
    * Save data to LocalStorage JSON
    */
   function saveData(){
-  	setItem(dataName,JSON.stringify(data));
-  	window.tryScreenshot&&window.tryScreenshot();
+  	storageSet(dataName,JSON.stringify(data));
+  }
+
+  /**
+   * Get the stylesheet
+   * @returns {CSSStyleSheet}
+   */
+  function getStyleSheet(){
+    styleSheet||Array.from(document.styleSheets).forEach(sheet=>{
+      if (sheet.title===name) styleSheet = sheet;
+    });
+    return styleSheet;
   }
 
 })();

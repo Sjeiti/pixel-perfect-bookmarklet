@@ -1,0 +1,28 @@
+{
+  "name": "pixelPerfectBookmarklet",
+  "version": "1.0.0",
+  "description": "",
+  "main": "pixelPerfectBookmarklet.js",
+  "scripts": {
+    "start": "npm run build & npm run watch",
+    "build": "babel pixelPerfectBookmarklet.js --out-file pixelPerfectBookmarklet.min.js  --presets=babili,es2015",
+    "watch": "chokidar pixelPerfectBookmarklet.js -c \"npm run build\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gist.github.com/d06d52e898bee598d6f5757c6961b4f8.git"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-preset-babili": "^0.1.4",
+    "babel-preset-es2015": "^6.24.1",
+    "chokidar-cli": "^1.2.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://gist.github.com/d06d52e898bee598d6f5757c6961b4f8"
+  },
+  "homepage": "https://gist.github.com/d06d52e898bee598d6f5757c6961b4f8"
+}
