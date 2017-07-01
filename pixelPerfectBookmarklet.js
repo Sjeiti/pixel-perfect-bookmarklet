@@ -7,6 +7,17 @@
  * In order to enforce breakpoints the bookmarklet inserts a page in which it loads itself, this means your CORS settings should be set accordingly (shouldn't be a problem for developer servers).
  */
 (function(){
+
+  /**
+   * The overlay-item stored in localStorage
+   * @typedef {Object} overlayItem
+   * @property {string} data
+   * @property {number} lastModified
+   * @property {string} name
+   * @property {number} naturalWidth
+   * @property {number} naturalHeight
+   */
+
 	const name = 'pixelPerfect'
       ,storageGet = localStorage.getItem.bind(localStorage)
       ,storageSet = localStorage.setItem.bind(localStorage)
@@ -30,10 +41,9 @@
       ,data = Object.assign(dataDefault,JSON.parse(storageGet(dataName)))||dataDefault;
   let {pathname} = location
       ,list = getList()
-      ,bg = getBg()
+      ,selectedItem = lastListItem()
       ,url = location.href
-      ,main,file,loadedFile,paragraph,inner,image,show,range,horizontal,vertical,styleSheet,widthStyleRule;
-  console.log('list',list); // todo: remove log
+      ,main,file,orderedList,inner,image,show,range,horizontal,vertical,styleSheet,widthStyleRule;
   checkOverlay();
   const style =
 `#${name} {
@@ -108,6 +118,21 @@
   background-color: rgba(255,255,255,0.2);
   text-align: center;
 }
+#${name} ol {
+  margin: 0 0 20px 0;
+  padding: 0;
+  list-style: none;
+}
+#${name} li {
+  display: inline-block;
+  cursor: pointer;
+}
+#${name} li.current {
+  font-weight: bold;
+}
+#${name} li:not(:first-child) {
+  padding: 0 5px;
+}
 #${name} label {
   display: flex;
   margin: 0 0 8px 0;
@@ -131,7 +156,7 @@ input[type=range] {
   top: 0;
   width: ${data.width}%;
   height: ${data.height}%;
-  background-image: url(${bg});
+  background-image: url(${selectedItem.data||''});
   background-repeat: no-repeat;
   opacity: ${data.show&&data.opacity||0};
   transition: box-shadow 200ms linear;
@@ -164,7 +189,7 @@ iframe.${name} {
         add image
         <input class="visually-hidden" type="file" accept="image/gif, image/jpg, image/jpeg, image/png, image/svg, .gif, .jpg, .jpeg, .png, .svg" />
     </label>
-    <p></p>
+    <ol></ol>
     <label><span>show/hide</span><input type="checkbox" ${data.show?'checked':''} class="show" /></label>
     <label><span>opacity</span><input type="range" min="0" max="1" step="0.05" value="${data.opacity}" class="opacity" /></label>
     <label><span>horizontal</span><input type="range" min="0" max="100" step="0.1" value="${data.width}" class="horizontal" /></label>
@@ -174,7 +199,7 @@ iframe.${name} {
   ;
 	wrap.id = name;
 	wrap.innerHTML = html;
-  bg&&setBodyWidth(bg);
+  setBodyWidth(selectedItem.data);
   body.innerHTML = `<iframe src="${location.href}" class="${name}" frameborder="0"></iframe>`;
   body.appendChild(wrap);
   initEvents();
@@ -198,7 +223,7 @@ iframe.${name} {
   function initAfterFrame(){
     main = document.getElementById(name);
     file = main.querySelector('input[type=file]');
-    paragraph = main.querySelector('p');
+    orderedList = main.querySelector('ol');
     inner = main.querySelector('.inner');
     image = main.querySelector('.image');
     show = main.querySelector('input.show');
@@ -208,6 +233,7 @@ iframe.${name} {
     inner.addEventListener('mousedown',()=>{wrap.classList.add('mousedown')});
     body.addEventListener('mouseup',()=>{wrap.classList.remove('mousedown')});
     file.addEventListener('change',onFileChange);
+    orderedList.addEventListener('click',onSelectItem);
     show.addEventListener('change',onShow);
     range.addEventListener('input',onOpacity);
     horizontal.addEventListener('input',onImageSize.bind(null,'width'));
@@ -230,14 +256,21 @@ iframe.${name} {
     });
   }
 
+  /**
+   * Get the list of stored items
+   * @returns {overlayItem[]}
+   */
   function getList(){
   	const listRaw = storageGet(pathname)||storageGet(name);
     return listRaw?JSON.parse(listRaw):[];
   }
 
-  function getBg(){
-    loadedFile = list.slice(0).pop(); // todo: always last?
-    return loadedFile&&loadedFile.data?loadedFile.data:'';
+  /**
+   * Get last item on the list
+   * @returns {overlayItem}
+   */
+  function lastListItem(){
+    return list&&list.slice(0).pop()||{};
   }
 
   /**
@@ -245,11 +278,19 @@ iframe.${name} {
    * For when url changes dynamically (ie in SPA)
    */
   function checkOverlay(){
-    const oldBg = bg;
+    const oldItem = selectedItem;
     pathname = location.pathname;
     list = getList();
-    bg = getBg();
-    oldBg!==bg&&setBackground(bg)
+    let hasItem = false;
+    list.forEach(item=>{
+      if (item.data===oldItem.data) {
+        hasItem = true;
+      }
+    });
+    if (!hasItem) {
+      selectedItem = lastListItem();
+      setBackground(selectedItem.data);
+    }
   }
 
   /**
@@ -266,7 +307,7 @@ iframe.${name} {
    * @param imageData
    */
   function setBodyWidth(imageData){
-    imgLoader.src = imageData;
+    if (imageData) imgLoader.src = imageData;
   }
 
   /**
@@ -277,7 +318,7 @@ iframe.${name} {
     const target = e.target
         ,fileReader = new FileReader()
         ,file = target.files[0];
-    loadedFile = {name:file.name,lastModified:file.lastModified};
+    selectedItem = {name:file.name,lastModified:file.lastModified};
     fileReader.addEventListener('load', onImageLoad);
     fileReader.readAsDataURL(file);
   }
@@ -289,10 +330,8 @@ iframe.${name} {
   function onImageLoad(e){
     const fileReader = e.target
         ,result = fileReader.result;
-    // storageSet(name,result);
-    // storageSet(pathname,result);
     setBackground(result.toString());
-    if (loadedFile) loadedFile.data = result;
+    if (selectedItem) selectedItem.data = result;
     file.value = null;
   }
 
@@ -303,26 +342,33 @@ iframe.${name} {
   function onBodyWidthLoad({currentTarget}){
     const {naturalWidth,naturalHeight} = currentTarget
         ,style = `max-width:${naturalWidth}px;width:${naturalWidth}px;`;
-    //
-    //
-    //////////////////////////////////////////////////////////////////////////////
-    if (loadedFile) {
-      console.log('loadedFile',loadedFile); // todo: remove log
-      Object.assign(loadedFile,{naturalWidth,naturalHeight});
-      paragraph.innerText = `${loadedFile.name} ${naturalWidth}x${naturalHeight}`;
-      !list.includes(loadedFile)&&list.push(loadedFile); // todo: overwrite same with files
+
+    if (selectedItem) {
+      Object.assign(selectedItem,{naturalWidth,naturalHeight});
+      listPush(selectedItem);
+      fillOrderedList();
     }
     storageSet(name,JSON.stringify(list));
     storageSet(pathname,JSON.stringify(list));
-    //////////////////////////////////////////////////////////////////////////////
-    //
-    //
+
     if (!widthStyleRule) {
       getStyleSheet().addRule(`html, body, iframe.${name}`,style);
       widthStyleRule = styleSheet.rules[styleSheet.rules.length-1];
     } else {
       widthStyleRule.style = style;
     }
+  }
+
+  /**
+   * Click handler for ordered list
+   * @param {HTMLLIElement} target
+   */
+  function onSelectItem({target}){
+    const naturalWidth = parseInt(target.innerText,10);
+    list.forEach(item=>{
+      if (item.naturalWidth===naturalWidth) selectedItem = item;
+    });
+    selectedItem&&setBackground(selectedItem.data);
   }
 
   /**
@@ -333,6 +379,34 @@ iframe.${name} {
     data.show = e.target.checked;
     setOpacity();
     saveData();
+  }
+
+  /**
+   * Add an item to the list while retaining order.
+   * @param {overlayItem} item
+   */
+  function listPush(item) {
+    const {naturalWidth} = item;
+    let existingIndex;
+    list.forEach((item,i)=>{
+      if (item.naturalWidth===naturalWidth) {
+        existingIndex = i;
+      }
+    });
+    existingIndex!==undefined&&list.splice(existingIndex, 1);
+    !list.includes(item)&&list.push(item);
+    list.sort((a,b)=>a.naturalWidth>b.naturalWidth?1:-1);
+  }
+
+  /**
+   * Fill the ordered-list with currently saved items
+   */
+  function fillOrderedList() {
+    let innerHTML = '';
+    list.forEach(item=>{
+      innerHTML += `<li${item===selectedItem?' class="current"':''}>${item.naturalWidth}</li>`;
+    });
+    orderedList.innerHTML = innerHTML;
   }
 
   /**
