@@ -3,8 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>pixelPerfectBookmarklet test html</title>
+  <title>Pixel-Perfect bookmarklet test html</title>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+  <style type="text/css">
+    .bookmarklet:before {
+      content: 'bookmarklet'
+    }
+    .bookmarklet span {
+      display: none;
+    }
+    .test-img {
+      max-width: 100%;
+      height: 100px;
+      margin: 10px 0 20px;
+      overflow: hidden;
+      background: #888;
+      border: 3px solid #888;
+      text-align: center;
+    }
+    .test-img img {
+      width: 50%;
+    }
+  </style>
 </head>
 <body>
 <!-- basic page layout taken from https://v4-alpha.getbootstrap.com/examples/jumbotron/ -->
@@ -12,25 +32,25 @@
   <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
   </button>
-  <a class="navbar-brand" href="#">Navbar</a>
+  <a class="navbar-brand" href="#">Pixel-Perfect bookmarklet</a>
 
   <div class="collapse navbar-collapse" id="navbarsExampleDefault">
     <ul class="navbar-nav mr-auto">
       <li class="nav-item active">
-        <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
+        <a class="nav-link" href="#a">Home <span class="sr-only">(current)</span></a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#">Link</a>
+        <a class="nav-link" href="#b">Link</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link disabled" href="#">Disabled</a>
+        <a class="nav-link disabled" href="#c">Disabled</a>
       </li>
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" href="http://example.com" id="dropdown01" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Dropdown</a>
         <div class="dropdown-menu" aria-labelledby="dropdown01">
-          <a class="dropdown-item" href="#">Action</a>
-          <a class="dropdown-item" href="#">Another action</a>
-          <a class="dropdown-item" href="#">Something else here</a>
+          <a class="dropdown-item" href="#ca">Action</a>
+          <a class="dropdown-item" href="#cb">Another action</a>
+          <a class="dropdown-item" href="#cc">Something else here</a>
         </div>
       </li>
     </ul>
@@ -46,7 +66,7 @@
   <div class="container">
     <h1 class="display-3">Pixel-perfect</h1>
     <p>This is a small bookmarklet script for pixel-perfect checking designs against implementation. To use it check the big blue button below it contains the script. Simply drag the big blue button to your bookmarks bar.</p>
-    <p><a class="btn btn-primary btn-lg bookmarklet" href="#" role="button">pp</a></p>
+    <p><a class="btn btn-primary btn-lg bookmarklet" href="#" role="button"><span>pp</span></a></p>
   </div>
 </div>
 
@@ -54,19 +74,22 @@
   <!-- Example row of columns -->
   <div class="row">
     <div class="col-md-4">
-      <h2>Heading</h2>
-      <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-      <p><a class="btn btn-secondary" href="#" role="button">View details &raquo;</a></p>
+      <h2>Test&nbsp;image&nbsp;320</h2>
+      <div class="test-img"><img src="testImg/bootstrap320.png" /></div>
+      <p>You can use above image as a test layout. Download the image, run the bookmarklet and load the image by clicking 'add image'. This might seem too much text but I'm trying to give it the same length as the original boot strap design.</p>
+      <p><a class="btn btn-secondary" href="testImg/bootstrap320.png" download="bootstrap320.png" role="button">Download image &raquo;</a></p>
     </div>
     <div class="col-md-4">
-      <h2>Heading</h2>
-      <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-      <p><a class="btn btn-secondary" href="#" role="button">View details &raquo;</a></p>
+      <h2>Test&nbsp;image&nbsp;768</h2>
+      <div class="test-img"><img src="testImg/bootstrap768.png" /></div>
+      <p>You can use above image as a test layout. Download the image, run the bookmarklet and load the image by clicking 'add image'. This might seem too much text but I'm trying to give it the same length as the original boot strap design.</p>
+      <p><a class="btn btn-secondary" href="testImg/bootstrap768.png" download="bootstrap768.png" role="button">Download image &raquo;</a></p>
    </div>
     <div class="col-md-4">
-      <h2>Heading</h2>
-      <p>Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas eget quam. Vestibulum id ligula porta felis euismod semper. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
-      <p><a class="btn btn-secondary" href="#" role="button">View details &raquo;</a></p>
+      <h2>Test&nbsp;image&nbsp;1024</h2>
+      <div class="test-img"><img src="testImg/bootstrap1024.png" /></div>
+      <p>You can use above image as a test layout. Download the image, run the bookmarklet and load the image by clicking 'add image'. This might seem too much text but I'm trying to give it the same length as the original boot strap design.</p>
+      <p><a class="btn btn-secondary" href="testImg/bootstrap1024.png" download="bootstrap1024.png" role="button">Download image &raquo;</a></p>
     </div>
   </div>
 
@@ -82,14 +105,15 @@
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js"></script>
 
 <script>
-  if (window.self===window.top) {
-    var req = new XMLHttpRequest();
-    req.open('GET','pixelPerfectBookmarklet.min.js');
-    req.addEventListener('load',function (e){
-      document.querySelector('.bookmarklet').setAttribute('href','javascript:'+e.target.response);
-    });
-    req.send();
-  }
+  var isFramed = window.self!==window.top
+      ,bookmarklet = document.querySelector('.bookmarklet')
+      ,req = new XMLHttpRequest();
+  req.open('GET','dist/pixelPerfectBookmarklet.min.js');
+  req.addEventListener('load',function (e){
+    bookmarklet.setAttribute('href','javascript:'+e.target.response);
+  });
+  req.send();
+  isFramed&&bookmarklet.addEventListener('click',function(e){e.preventDefault();return false})
 </script>
 </body>
 </html>

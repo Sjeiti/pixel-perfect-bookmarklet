@@ -39,11 +39,11 @@
       }
       ,dataName = `${name}Data`
       ,data = Object.assign(dataDefault,JSON.parse(storageGet(dataName)))||dataDefault;
-  let {pathname} = location
+  let {pathname} = location // todo
       ,list = getList()
       ,selectedItem = lastListItem()
       ,url = location.href
-      ,main,file,orderedList,inner,image,show,range,horizontal,vertical,styleSheet,widthStyleRule;
+      ,main,file,orderedList,inner,image,show,range,horizontal,vertical,styleSheet,widthStyleRule,iframe;
   checkOverlay();
   const style =
 `#${name} {
@@ -202,26 +202,29 @@ iframe.${name} {
   setBodyWidth(selectedItem.data);
   body.innerHTML = `<iframe src="${location.href}" class="${name}" frameborder="0"></iframe>`;
   body.appendChild(wrap);
-  initEvents();
+  // initEvents();
+    body.addEventListener('keydown', onImageSizeKeyboard, true);
+    imgLoader.addEventListener('load',onBodyWidthLoad);
   requestAnimationFrame(initAfterFrame);
 
 
-  /**
-   * Initialise all the events
-   */
-  function initEvents(){
-    window.addEventListener('popstate', checkOverlay, true);
-    body.addEventListener('click', onCheckUrl, true);
-    body.addEventListener('keyup', onCheckUrl, true);
-    body.addEventListener('keydown', onImageSizeKeyboard, true);
-    imgLoader.addEventListener('load',onBodyWidthLoad);
-  }
+  // /**
+  //  * Initialise all the events
+  //  */
+  // function initEvents(){
+  //   // window.addEventListener('popstate', checkOverlay, true);
+  //   // body.addEventListener('click', onCheckUrl, true);
+  //   // body.addEventListener('keyup', onCheckUrl, true);
+  //   body.addEventListener('keydown', onImageSizeKeyboard, true);
+  //   imgLoader.addEventListener('load',onBodyWidthLoad);
+  // }
 
   /**
    * Initialisation after one frame, when the DOM has settled the innerHTML of `wrap`
    */
   function initAfterFrame(){
     main = document.getElementById(name);
+    iframe = body.querySelector('iframe');
     file = main.querySelector('input[type=file]');
     orderedList = main.querySelector('ol');
     inner = main.querySelector('.inner');
@@ -239,6 +242,13 @@ iframe.${name} {
     horizontal.addEventListener('input',onImageSize.bind(null,'width'));
     vertical.addEventListener('input',onImageSize.bind(null,'height'));
 
+    iframe.addEventListener('load',()=>{
+      const iframeBody = iframe.contentDocument.body;
+      iframeBody.addEventListener('click', onCheckUrl, true);
+      iframeBody.addEventListener('keyup', onCheckUrl, true);
+      iframe.contentWindow.addEventListener('popstate', checkOverlay, true);
+    });
+
     requestAnimationFrame(()=>inner.classList.add('added'));
 
     Array.from(document.styleSheets).forEach(sheet=>{
@@ -251,8 +261,12 @@ iframe.${name} {
    */
   function onCheckUrl(){
     requestAnimationFrame(()=>{
-      url!==location.href&&checkOverlay();
-      url = location.href;
+      const iframeWindow = iframe.contentWindow;
+      const iframeUrl = iframeWindow.location.href;
+      const iframeTitle = iframeWindow.document.title;
+      url!==iframeUrl&&checkOverlay(); // todo... we're checking href but using pathname to save...
+      window.history.pushState({},iframeTitle,iframeUrl);
+      url = iframeUrl;
     });
   }
 
@@ -279,7 +293,7 @@ iframe.${name} {
    */
   function checkOverlay(){
     const oldItem = selectedItem;
-    pathname = location.pathname;
+    pathname = iframe&&iframe.contentWindow.location.pathname||location.pathname;
     list = getList();
     let hasItem = false;
     list.forEach(item=>{
@@ -329,8 +343,8 @@ iframe.${name} {
    */
   function onImageLoad(e){
     const fileReader = e.target
-        ,result = fileReader.result;
-    setBackground(result.toString());
+        ,result = fileReader.result.toString();
+    setBackground(result);
     if (selectedItem) selectedItem.data = result;
     file.value = null;
   }
@@ -352,7 +366,7 @@ iframe.${name} {
     storageSet(pathname,JSON.stringify(list));
 
     if (!widthStyleRule) {
-      getStyleSheet().addRule(`html, body, iframe.${name}`,style);
+      getStyleSheet().addRule(`html, body, #${name}, iframe.${name}`,style);
       widthStyleRule = styleSheet.rules[styleSheet.rules.length-1];
     } else {
       widthStyleRule.style = style;
